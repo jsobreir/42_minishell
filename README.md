@@ -1,7 +1,7 @@
 # minishell
 <p style="text-align:center;">As beautiful as a shell.</p>
 
-The goal of this project is to create an algorithm capable of ordering a Stack of numbers, using a restricted set of operations.
+The goal of this project is to create a simpler version of a shell, adhering to the Goals and Rules below.
 
 ## Documentation
 ## Project Goals and Rules
@@ -127,6 +127,8 @@ These are the subsystems that make executing commands possible:
   - [ ] Create test cases for all possible scenarios, including edge cases.
   - [ ] Validate memory management using `valgrind` or similar tools to ensure no memory leaks.
 
+## Links
+- https://www.markdownguide.org/extended-syntax/
 ## Disclaimer
 At 42 School our projects have to adhere to the 42 Norm of coding standards and good practices. These include:
 - Maximum 25 lines per function and 5 functions per file;
