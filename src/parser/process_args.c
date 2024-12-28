@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   process_args.c                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jsobreir <jsobreir@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/11/20 15:45:34 by jsobreir          #+#    #+#             */
+/*   Updated: 2024/11/20 15:45:35 by jsobreir         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "minishell.h"
 
 int	open_file(t_tokens *tokens, t_shell *shell)
@@ -8,24 +20,22 @@ int	open_file(t_tokens *tokens, t_shell *shell)
 	if (fd == -1)
 	{
 		if (errno == EACCES)
-			do_error(tokens, shell, ERROR_PDN);
+			do_error(0, tokens, shell, ERROR_PDN);
 		else if (errno == ENOENT)
-			do_error(tokens, shell, ERROR_OPEN);
+			do_error(0, tokens, shell, ERROR_OPEN);
 	}
 	return (fd);
 }
 
 int	*get_fds(t_tokens **tokens, t_shell *shell)
-{	
+{
 	int			*fd;
 	t_tokens	*temp;
 	t_tokens	*infile;
 	int			stop;
 
 	temp = *tokens;
-	fd = init_fds();
-	infile = NULL;
-	stop = 0;
+	fd = init_fds(&stop, &infile);
 	while (temp)
 	{
 		find_limiter(temp, shell, fd);
@@ -46,30 +56,23 @@ int	*get_fds(t_tokens **tokens, t_shell *shell)
 	return (fd);
 }
 
-void	create_fds(t_shell *args, t_tokens *tokens)
+static void	create_fds(t_shell *args, t_tokens *tokens)
 {
-	int	i;
-	int	fd_in;
-	int	fd_out;
-	int	*fd;
-	t_fds		*node;
-	t_fds		*fds = NULL;
+	int		*fd;
+	int		i;
+	t_fds	*node;
 
+	args->fds = NULL;
 	i = 0;
-	fd_in = 0;
-	fd_out = 0;
 	while (i <= args->n_pipes)
 	{
 		fd = get_fds(&tokens, args);
-		fd_out = fd[1];
-		fd_in = fd[0];
+		node = new_fds(fd[0], fd[1], i);
 		free(fd);
-		node = new_fds(fd_in, fd_out, i);
-		add_back_fds(&fds, node);
+		add_back_fds(&args->fds, node);
 		set_next_pipe(&tokens);
 		i++;
 	}
-	args->fds = fds;
 }
 
 int	process_tokens(t_tokens **tokens, t_shell *args)
@@ -79,5 +82,23 @@ int	process_tokens(t_tokens **tokens, t_shell *args)
 	temp = *tokens;
 	args->n_pipes = count_pipes(tokens);
 	create_fds(args, temp);
+	return (0);
+}
+
+/// @brief Checks if a topen is of DIR_FILE type.
+/// @param tokens Pointer to a struct containing tokens list.
+/// @return 
+int	check_dir_cmd(t_tokens **tokens)
+{
+	char	*token;
+
+	token = (*tokens)->token;
+	if ((*token == '.' || *token == '~' || has_char(token, '/')))
+	{
+		(*tokens)->type = DIR_FILE;
+		(*tokens) = (*tokens)->next;
+	}
+	else
+		command(tokens);
 	return (0);
 }

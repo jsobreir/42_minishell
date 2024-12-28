@@ -1,20 +1,53 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   expander.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bpaiva-f <bpaiva-f@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/11/20 15:45:17 by jsobreir          #+#    #+#             */
+/*   Updated: 2024/11/23 15:56:33 by bpaiva-f         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "minishell.h"
 
-char	*found_quote(char *token, t_quotes *q, int type)
+/// @brief If quote is found, this function skips that quote,
+/// if not inside unclosed brackets.
+/// @param token Pointer to the tokens struct.
+/// @param q Pointer to the quotes struct.
+/// @param type Type of quote in ASCII.
+/// @return 
+char	*found_quote(t_tokens *tokens, char *token, t_quotes *q, int type)
 {
-	char *trimed;
+	char	*trimed;
+	char	qtype[1];
 
 	if (type == '\'')
 		q->sq = !q->sq;
 	else if (type == '\"')
 		q->dq = !q->dq;
-	trimed = skip_quote(&token[q->i], "\"", q);
+	*qtype = (char)type;
+	trimed = skip_quote(&token[q->i], qtype, q);
 	token[q->i] = '\0';
 	token = ft_strfjoin(token, trimed, 3);
-	q->i--;
+	while (*token == type)
+	{
+		trimed = skip_quote(&token[q->i], qtype, q);
+		token[q->i] = '\0';
+		token = ft_strfjoin(token, trimed, 3);
+	}
+	if (q->i)
+		q->i--;
+	tokens->expanded = true;
 	return (token);
 }
 
+/// @brief Expand an env variable.
+/// @param token Pointer to the tokens struct.
+/// @param shell Pointer to the shell variables struct.
+/// @param q Pointer to the quotes struct.
+/// @return String containing expanded token.
 char	*expand(char *token, t_shell *shell, t_quotes *q)
 {
 	char	*temp;
@@ -33,20 +66,29 @@ char	*expand(char *token, t_shell *shell, t_quotes *q)
 	return (token);
 }
 
-char	*process_token(char *token, t_tokens *tokens, t_shell *shell, t_quotes *q)
+/// @brief Looks for quotes and expanders inside a token and 
+/// treats them accordingly.
+/// @param token String containing the current token being 
+/// treated.
+/// @param tokens Pointer to the tokens struct.
+/// @param shell Pointer to the shell variables struct.
+/// @param q Pointer to the quotes struct.
+/// @return String containing treated token.
+char	*process_token(char *token, t_tokens *tokens,
+	t_shell *shell, t_quotes *q)
 {
-	while (token[q->i])
+	while (token && token[q->i])
 	{
-		q->first_encounter = true;
+		q->fe = true;
 		if (token[q->i] == '\'' && q->dq == false)
-			token = found_quote(token, q, '\'');
+			token = found_quote(tokens, token, q, '\'');
 		else if (token[q->i] == '\"' && q->sq == false)
-			token = found_quote(token, q, '\"');
+			token = found_quote(tokens, token, q, '\"');
 		if (token[q->i] == '$' && q->sq == false)
 		{
-			if (token[q->i + 1] && token[q->i + 1] != ' ' && token[q->i + 1] != '$'
-				&& token[q->i + 1] != '\"' && token[q->i + 1] != '\''
-				&& check_new_token(&token[q->i + 1]) == 3)
+			if (token[q->i + 1] && token[q->i + 1] != ' '
+				&& token[q->i + 1] != '$' && token[q->i + 1] != '\"'
+				&& token[q->i + 1] != '\'' && check_nt(&token[q->i + 1]) == 3)
 				token = expand(token, shell, q);
 			else
 				q->i++;
@@ -56,16 +98,21 @@ char	*process_token(char *token, t_tokens *tokens, t_shell *shell, t_quotes *q)
 				break ;
 			}
 		}
-		else
+		else if (token[q->i])
 			q->i++;
 	}
 	return (token);
 }
 
+/// @brief Looks for quotes and expanders in every token. 
+/// Expands if not inside single-quotes.
+/// @param tokens Pointer to the tokens struct.
+/// @param shell Pointer to the shell variables struct.
+/// @return Pointer to the new, treated, tokens list.
 t_tokens	*handle_quotes(t_tokens *tokens, t_shell *shell)
 {
 	t_tokens	*ret;
-	char	*token;
+	char		*token;
 	t_quotes	q;
 
 	ret = tokens;
@@ -75,9 +122,16 @@ t_tokens	*handle_quotes(t_tokens *tokens, t_shell *shell)
 		init_quotes(&q);
 		token = tokens->token;
 		token = process_token(token, tokens, shell, &q);
-		if (!*token && tokens->type != NOT_SKIP)
+		if (!*token && tokens->expanded && tokens->type != NOT_SKIP)
 			tokens->type = SKIP;
 		tokens->token = token;
+		tokens = tokens->next;
+	}
+	tokens = ret;
+	while (tokens)
+	{
+		if (*(tokens->token) != '\0')
+			return (ret);
 		tokens = tokens->next;
 	}
 	return (ret);

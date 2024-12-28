@@ -1,190 +1,139 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   handle_export.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bpaiva-f <bpaiva-f@student.42porto.com>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/11/20 15:44:44 by jsobreir          #+#    #+#             */
+/*   Updated: 2024/12/03 11:01:40 by bpaiva-f         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "minishell.h"
 
-static int	check_export(t_tokens *tokens, t_shell *shell)
+/// @brief Checks if export cmd is well-written, and if it 
+/// meets the required criteria to be executed.
+/// @param begin 
+/// @param tokens 
+/// @param shell 
+/// @return 
+int	check_export(char *begin, t_tokens *tokens, t_shell *shell)
 {
 	int	i;
 
-	if (ft_strncmp(tokens->token, "export", 7) != 0)
-		return (do_error(tokens, shell, ERROR_CMD), 1);
-	if (tokens->next
-		&& (!ft_strncmp(tokens->next->token, "=", 1) || !ft_strncmp(tokens->next->token, "+=", 2)))
-		return (do_error(tokens, shell, ERROR_N_VAL), 1);
-	else if (tokens->next && tokens->next->type == ARG)
+	if (tokens && (!ft_strncmp(tokens->token, "=", 1)
+			|| !ft_strncmp(tokens->token, "+=", 2)))
+		return (do_error(begin, tokens, shell, ERROR_N_VAL), 1);
+	else if (tokens && tokens->type == ARG)
 	{
-		i = 1;
-		if (!ft_isalpha(tokens->next->token[0]) && tokens->next->token[0] != '_')
+		if (!ft_isalpha(tokens->token[0])
+			&& tokens->token[0] != '_')
+			return (do_error(begin, tokens, shell, ERROR_N_VAL), 1);
+		i = 0;
+		while (tokens->token[i]
+			&& tokens->token[i] != '=' && tokens->token[i] != '+')
 		{
-			do_error(tokens, shell, ERROR_N_VAL);
-			return (1);
-		}
-		while (tokens->next->token[i] 
-			&& tokens->next->token[i] != '=' && tokens->next->token[i] != '+')
-		{
-			if (!ft_isalnum(tokens->next->token[i]))
-			{
-				do_error(tokens, shell, ERROR_N_VAL);
-				return (1);
-			}
+			if (!ft_isalnum(tokens->token[i]))
+				return (do_error(begin, tokens, shell, ERROR_N_VAL), 1);
 			i++;
 		}
+		if ((tokens->token[i] && tokens->token[i + 1]
+				&& tokens->token[i] == '+' && tokens->token[i + 1] != '='))
+			return (do_error(begin, tokens, shell, ERROR_N_VAL), 1);
 	}
 	return (0);
 }
 
+static void	swap(int low, int i, char **envp)
+{
+	char	*temp;
+
+	temp = envp[i];
+	envp[i] = envp[low];
+	envp[low] = temp;
+}
+
+/// @brief Orders alphabetically an array of strings.
+/// @param envp 
+/// @return 
 char	**order_alphabetically(char **envp)
 {
 	int		i;
 	int		j;
-	int		lowest_index;
-	char	*temp;
+	int		low;
 
 	i = 0;
 	while (envp[i])
 	{
-		lowest_index = i;
+		low = i;
 		j = i + 1;
 		while (envp[j])
 		{
-			if (ft_strncmp(envp[lowest_index], envp[j], ft_strlen(envp[j])) > 0)
-				lowest_index = j;
-			else if (ft_strncmp(envp[lowest_index], envp[j], ft_strlen(envp[lowest_index])) > 0)
-				lowest_index = j;
+			if (ft_strncmp(envp[low], envp[j], ft_strlen(envp[j])) > 0)
+				low = j;
+			else if (ft_strncmp(envp[low], envp[j], ft_strlen(envp[low])) > 0)
+				low = j;
 			j++;
 		}
-		if (lowest_index != i)
-		{
-			temp = envp[i];
-			envp[i] = envp[lowest_index];
-			envp[lowest_index] = temp;
-		}
+		if (low != i)
+			swap(low, i, envp);
 		i++;
 	}
 	return (envp);
 }
 
-static void	add_var(char **env, t_tokens *tokens)
-{
-	int 	i;
-	int 	j;
-	char	*temp;
-	char	*appended;
-
-	j = 0;
-	i = arr_len(env);
-	while (env[j])
-	{
-		if (has_char(tokens->token, '=') &&
-			!strncmp(env[j], tokens->token, ft_strclen(env[j], '=')) &&
-			!strncmp(env[j], tokens->token, ft_strclen(tokens->token, '=')))
-		{
-			if (has_char(tokens->token, '='))
-				env[j] = ft_strdup(tokens->token);
-			env[i] = NULL;
-			return ;
-		}
-		else if (!has_char(tokens->token, '=') &&
-			!strncmp(env[j], tokens->token, ft_strlen(env[j])) &&
-			!strncmp(env[j], tokens->token, ft_strlen(tokens->token)))
-		{
-			env[j] = ft_strdup(tokens->token);
-			env[i] = NULL;
-			return ;
-		}
-		else if (has_char(tokens->token, '+') && !strncmp(env[j], tokens->token, ft_strclen(tokens->token, '+')))
-		{
-			if (ft_strclen(tokens->token, '\"') > ft_strclen(tokens->token, '+'))
-			{
-				temp = tokens->token;
-				while (*temp != '=')
-					temp++;
-				temp++;
-				ft_strtrim(temp, "\"");
-				if (has_char(env[j], '='))
-				{
-					ft_strtrim(env[j], "\"");
-					appended = ft_strjoin(env[j], temp);
-				}
-				else
-				{
-					appended = ft_strjoin(env[j], "=");
-					appended = ft_strfjoin(appended, temp, 1);
-				}
-				env[j] = appended;
-				return ;
-			}
-		}
-		j++;
-	}
-	env[i] = ft_strdup(tokens->token);
-	env[i + 1] = NULL;
-}
-
-static void	print_export(char **envp)
-{
-	int i;
-	int	equal_sign;
-	char	*env;
-
-	while (envp && *envp)
-	{
-		i = 0;
-		equal_sign = 0;
-		env = *envp;
-		ft_printf_fd(STDOUT_FILENO, "declare -x ");
-		while (env[i])
-		{
-			write(STDOUT_FILENO, &env[i], 1);
-			if (env[i] == '=')
-			{
-				write(STDOUT_FILENO, "\"", 1);
-				equal_sign = 1;
-			}
-			i++;
-		}
-		if (equal_sign == 1)
-			ft_printf_fd(STDOUT_FILENO, "\"");
-		ft_printf_fd(STDOUT_FILENO, "\n", 1);
-		envp++;
-	}
-}
-static void	update_env(t_tokens *tokens, t_shell *shell)
+/// @brief Updates the envp vars with the variable to be 
+/// exported.
+/// @param begin 
+/// @param tokens 
+/// @param shell 
+void	update_env(char *begin, t_tokens *tokens, t_shell *shell)
 {
 	char	**envp;
 	char	**new_envp;
 	int		i;
 
-	while (tokens->next && tokens->next->type == ARG)
+	i = 0;
+	while (tokens && tokens->type == ARG)
 	{
-		envp = shell->envp;
-		new_envp = malloc(sizeof(char *) * (arr_len(envp) + 2));
-		i = 0;
-		while (envp[i])
+		if (check_export(begin, tokens, shell))
 		{
-			new_envp[i] = ft_strdup(envp[i]);
-			i++;
+			tokens = tokens->next;
+			continue ;
 		}
-		new_envp[i] = NULL;
-		add_var(new_envp, tokens->next);
-		free_array(shell->envp, arr_len(shell->envp));
-		shell->envp = new_envp;
-		tokens = tokens->next;
+		if (tokens)
+		{
+			envp = shell->envp;
+			new_envp = malloc(sizeof(char *) * (arr_len(envp) + 2));
+			copy_envp(envp, new_envp, i);
+			add_var(new_envp, tokens);
+			free_paths(shell->envp);
+			shell->envp = new_envp;
+			tokens = tokens->next;
+		}
 	}
 }
 
+/// @brief Handles the export cmd, followed by the argument 
+/// containing the var to be exported.
+/// @param tokens 
+/// @param shell 
+/// @return 
 int	ft_export(t_tokens *tokens, t_shell *shell)
 {
 	char	**envp_print;
 
-	if (check_export(tokens, shell) != 0)
-		return (1);
+	if (ft_strncmp(tokens->token, "export", 7) != 0)
+		return (do_error(0, tokens, shell, ERROR_CMD), 1);
 	if (tokens->next && tokens->next->type == ARG)
-		update_env(tokens, shell);
+		update_env(tokens->token, tokens->next, shell);
 	else
 	{
 		envp_print = ft_arrdup(shell->envp);
 		envp_print = order_alphabetically(envp_print);
 		print_export(envp_print);
-		free_array(envp_print, arr_len(envp_print));
+		free_paths(envp_print);
 	}
 	return (1);
 }

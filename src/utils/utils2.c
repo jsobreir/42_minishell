@@ -1,4 +1,16 @@
-# include "minishell.h"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils2.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jsobreir <jsobreir@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/11/20 15:46:31 by jsobreir          #+#    #+#             */
+/*   Updated: 2024/11/20 15:56:45 by jsobreir         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "minishell.h"
 
 int	arr_len(char **arr)
 {
@@ -19,7 +31,8 @@ int	count_args(t_tokens *token)
 
 	temp = token;
 	count = 1;
-	while (temp && (temp->type == ARG || temp->type == CMD))
+	while (temp && (temp->type == ARG || temp->type == CMD
+			|| temp->type == DIR_FILE))
 	{
 		count++;
 		temp = temp->next;
@@ -27,7 +40,7 @@ int	count_args(t_tokens *token)
 	return (count);
 }
 
-int	free_array(char	**arr, int	len)
+int	free_array(char	**arr, int len)
 {
 	while (arr[len])
 	{

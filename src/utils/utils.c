@@ -1,9 +1,21 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jsobreir <jsobreir@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/11/20 15:46:28 by jsobreir          #+#    #+#             */
+/*   Updated: 2024/11/20 15:46:29 by jsobreir         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "minishell.h"
 
 int	count_pipes(t_tokens **tokens)
 {
-	t_tokens *temp;
-	int count;
+	t_tokens	*temp;
+	int			count;
 
 	temp = *tokens;
 	count = 0;
@@ -52,12 +64,13 @@ t_tokens	*new_node(char *content, int type)
 		return (NULL);
 	node->token = content;
 	node->type = type;
+	node->expanded = false;
 	node->next = NULL;
 	node->prev = NULL;
 	return (node);
 }
 
-void	lstclear(t_tokens **lst)
+void	lstclear(t_tokens **lst, int clean)
 {
 	t_tokens	*temp;
 
@@ -67,7 +80,7 @@ void	lstclear(t_tokens **lst)
 	{
 		temp = *lst;
 		*lst = (*lst)->next;
-		if (temp->token)
+		if (temp->token && clean)
 			free(temp->token);
 		temp->type = 0;
 		free(temp);
