@@ -35,7 +35,12 @@ The goal of this project is to create a simpler version of a shell, adhering to 
 
 
 ## Installing and Using
-To download, clone the repository into your device and navigate inside using `cd pipex`, then typing  `make` to compile all the functions and generate the executable pipex, which you can run as follows:
+To download, clone the repository into your device and navigate inside using `cd minishell`, then typing  `make` to compile all the functions and generate the executable minishell, which you can run as follows:
+```
+./minishell
+or
+make valgrind // If you want to run with a memory leaks checker
+```
 
 ## Theory
 ### Bash vs Terminal vs Command Line vs Prompt
@@ -125,9 +130,6 @@ These are the subsystems that make executing commands possible:
 - [ ] **Testing**
   - [ ] Create test cases for all possible scenarios, including edge cases.
   - [ ] Validate memory management using `valgrind` or similar tools to ensure no memory leaks.
-
-## Links
-- https://www.markdownguide.org/extended-syntax/
 
 ## Disclaimer
 At 42 School our projects have to adhere to the 42 Norm of coding standards and good practices. These include:
